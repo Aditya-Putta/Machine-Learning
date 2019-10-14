@@ -1,0 +1,171 @@
+---
+title: "Personl loan"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+
+library(caret)
+library(ISLR)
+library(dplyr)
+library(ggplot2)
+library(FNN)
+library(class)
+univ<-read.csv("UniversalBank.csv")
+summary(univ)
+
+univ <-univ[,c(-1,-5)]
+head(univ)
+
+univ$Personal.Loan <-factor(univ$Personal.Loan)
+
+levels(univ$Personal.Loan)
+set.seed(2596)
+
+
+# Partition the data
+
+train_index <- createDataPartition(univ$Age, p=.6, list= FALSE)
+train_data = univ[train_index,]
+val_data = univ[-train_index,]
+
+summary(train_data)
+summary(val_data)
+
+test_index= createDataPartition(univ$Age, p=.2,list = FALSE)
+test_data= univ[test_index,]
+
+View(test_index)
+
+
+# Normalize the data
+train_norm <- train_data[,-8]
+val_norm <- val_data[,-8]
+test_norm <-test_data[,-8]
+
+norm.values <- preProcess(train_norm,method=c("center", "scale"))
+train_norm<- predict(norm.values,train_norm)
+val_norm<- predict(norm.values,val_norm)
+test_norm<- predict(norm.values,test_norm)
+
+View(train_norm)
+View(val_norm)
+View(test_norm)
+
+# KNN Modelling
+
+library(FNN)
+
+nn <- knn(train = train_norm,test = test_norm,cl=train_data$Personal.Loan,k=15,prob = TRUE)
+
+row.names(train_data)[attr(nn, "nn.index")]
+
+library(caret)
+
+
+
+library(gmodels)
+
+accuracy.df <- data.frame(k = seq(1, 100, 1), accuracy = rep(0, 100))
+for(i in 1:100) {
+  knn.pred <- knn(train_norm, test_norm,  cl = train_data$Personal.Loan, k = i)
+  
+  
+  accuracy.df[i, 2] <- confusionMatrix(knn.pred,test_data$Personal.Loan)$overall[1] 
+}
+accuracy.df
+which.max(accuracy.df$accuracy)
+
+
+#Confusion Matrix
+CrossTable(x=test_data$Personal.Loan,y=nn, prop.chisq = FALSE)
+
+
+```
+
+
+```{r}
+##Adding new customer using rbind
+
+newRow <- data.frame(ID = "5001Age ="40", Experience = "10", Income = "84", Family = "2", CCAvg = "2", Education = "1", Mortgage = "0",Personal.Loan = "1", Securities.Account = "0" ,CD.Account = "0" ,Online = "1", CreditCard = "1" )
+
+UniversalBank$ID
+
+univ2<- rbind(univ, newRow)
+str(univ)
+head(univ)
+summary(univ)
+```
+
+```{r}
+## Repartition the data into training, validation, and test sets (50% : 30% : 20%)
+
+
+
+summary(UniversalBank)
+
+
+head(UB)
+
+univ2 <- UniversalBank [,c(-1,-5)]#### excluding 2 coloumn form data "ID" and "Zip Code"
+
+
+str(univ2)
+
+univ2$Personal.Loan <- factor(univ2$Personal.Loan)
+
+library(caret)
+library(ISLR)
+library(dplyr)
+library(ggplot2)
+library(FNN)
+library(class)
+# Partition the data
+set.seed(1580)
+
+
+
+training_index1 <- createDataPartition(univ2$Age, p = 0.5, list= FALSE)
+training_data1 = univ2[training_index1,]
+validation_index1 = createDataPartition(univ2$Age, p = 0.3, list= FALSE)
+validation_data1 = univ2[validation_index1,]
+
+test_index1 = createDataPartition(univ2$Age, p = 0.2,list = FALSE)
+test_data1 = univ2[test_index1,]
+
+# Normalize the Repartitioned data
+training_norm1 <- training_data1[,-8]
+validation_norm1 <- validation_data1[,-8]
+test_norm1 <-test_data1[,-8]
+
+norm.values1 <- preProcess(training_norm1,method=c("center", "scale"))
+training_norm1<- predict(norm.values1,training_norm1)
+validation_norm1<- predict(norm.values1,validation_norm1)
+test_norm1<- predict(norm.values1,test_norm1)
+
+# KNN Modelling
+NearestValue1 <- knn(train = training_norm1,test= test_norm1, cl=training_data1$Personal.Loan, k=1, prob = TRUE)
+
+
+accuracy1.df <- data.frame(k = seq(1, 14, 1), accuracy = rep(0, 14))
+for(i in 1:14) {
+  knn.pred1 <- knn(training_norm1, test_norm1,  cl = training_data1$Personal.Loan, k = i)
+  
+  
+  accuracy1.df[i, 2] <- confusionMatrix(knn.pred1,test_data1$Personal.Loan)$overall[1] 
+}
+accuracy1.df
+
+#Confusion Matrix
+
+
+CrossTable(x=test_data1$Personal.Loan,y=NearestValue1, prop.chisq = FALSE)
+```
+
