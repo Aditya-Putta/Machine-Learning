@@ -1,0 +1,188 @@
+---
+title: "R Notebook"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r}
+library(readr)
+Universities <- read_csv("C:/Trading detail/STUDY/01_MSBA/02 MSBA ML/03/Universities.csv")
+View(Universities)
+
+
+library(tidyverse)
+library(factoextra)
+library(ISLR)
+library(caret)
+
+summary(Universities)
+
+```
+
+
+a.  Remove all records with missing measurements from the dataset.
+```{r}
+# remove na in r - remove rows - na.omit function / option
+
+set.seed(123)
+univ <- na.omit(Universities) 
+
+
+univ<-univ[,c(-1,-2,-3)]
+summary(univ)
+```
+
+b. For all the continuous measurements, run K-Means clustering. Make sure to normalize the measurements. How many clusters seem reasonable for describing these data? What was your optimal K?
+```{r}
+##Scaling the data frame (z-score) 
+univ <- scale(univ)
+univ<- as.data.frame(univ)
+
+### toFind best value of k by for total within sum of square
+fviz_nbclust(univ, kmeans, method = "wss")   ###by applying 2 method "Wss" The chart shows that the elbow point 3 provides the best value for k.
+
+### toFind best value of k by average silhouette width
+
+fviz_nbclust(univ, kmeans, method = "silhouette")  ### applying "silhouette" method we see that 3 is the ideal number of clusters. 
+
+fitk <- kmeans(univ,centers = 3)
+
+fitk$size ## shows no. of observation in each cluster
+
+fitk  ## summary of each cluster 
+
+
+```
+
+
+c. Compare the summary statistics for each cluster and describe each cluster in this context (e.g., “Universities with high tuition, low acceptance rate...”).
+
+
+
+```{r}
+fitk$centers  ## means of each cluster
+##from means of the cluster we can conclude following information about different cluster
+
+
+
+```
+
+CLUSTER 3 :
+has received high no. of application received,
+has received high no. of application accepted,
+high % of student enrolling for admission,
+high no. of student with fulltime undergrad,
+high no. of student with parttime undergrad,
+low tution fee for in state student ,
+high charges for additionalfees ,
+high cost of books compared to others,
+high personal expense,
+good ratio for student to faculty,
+
+Cluster 2 
+
+high no of new student from top 10%,
+high no of new student from top 25%,
+low no. of student enrolled in undergrad,
+high tution fee for in state student ,
+high tution fee for out state student,
+high occupncy for rooms,
+high useage of board,
+low personal expense,
+high % of faculty with PHD, 
+bad ratio for student to faculty,
+high graduation rate,
+
+
+Cluster 1 
+
+received low application,
+accepted low application,
+low % of student enrolling for admission,
+low no of new student from top 10%,
+low no of new student from top 25%,
+low no. of student with fulltime undergrad,
+low tution fee for out state student,
+low occupncy for rooms,
+low useage of board,
+low charges for additionalfees, 
+low cost of books compared to others,
+low  % of faculty with PHD ,
+low graduation rate,
+
+
+```{r}
+## ploting information about cluster on graph
+
+fviz_cluster(fitk,data = univ)
+```
+
+
+d. Use the categorical measurements that were not used in the analysis (State and Private/Public) to characterize the different clusters. Is there any relationship between the clusters and the categorical information?
+
+
+```{r}
+## adding catagorical variable into a table format
+
+
+univ1 <- na.omit(Universities) ## using orignal dataset to omit NA values
+
+qwe <- cbind(univ1$`College Name`,univ1$State,univ1$`Public (1)/ Private (2)`,fitk$cluster) ### combining coloumn with cluters information and finding which university fallin which cluster
+
+qwe <- as.data.frame(qwe) ## converting into dataframe
+
+qwe$V3 <- factor(qwe$V3,levels = c(1,2),labels = c("public","private"))  ### defining levels for private ans public
+
+qwe$V4 <- factor(qwe$V4,levels = c(1,2,3),labels = c("below avegrage ","above Average", "  average")) ## name cluster as different catagory
+
+
+
+head(qwe)
+
+
+
+
+```
+
+
+```{r}
+qwe[qwe$V4=="below avegrage ",] ### this show that good mix of private and  public university 
+```
+```{r}
+qwe[qwe$V4=="  average",]  ### this show that more no. of public university 
+```
+
+```{r}
+qwe[qwe$V4=="above Average",]  ###  this show that more no. of private university 
+```
+
+
+e. What other external information can explain the contents of some or all of these clusters?
+
+
+### as mention above
+`
+
+f. Consider Tufts University, which is missing some information. Compute the Euclidean distance of this record from each of the clusters that you found above (using only the measurements that you have). Which cluster is it closest to? Impute the missing values for Tufts by taking the average of the cluster on those measurements. 
+
+```{r}
+univ2 <- Universities[ Universities$`College Name`== "Tufts University",] ## selecting Tufts university from original dataset
+
+view(univ2)
+univ2$`# PT undergrad` <- mean(Universities$`# PT undergrad`,na.rm=TRUE) ## selecting means value from coloumn and applying it to NA value for PT undergrad
+
+univ2 <- rbind(univ1,univ2)  ### combining dataset
+view(univ2)
+
+univ2_scale <- scale(univ2[,c(-1,-2,-3)]) ### applying normalization
+
+fitk2 <- kmeans(univ2_scale,3) ### apply kmeans to dataset
+
+
+univ2<-cbind( univ2,fitk2$cluster) ## combining cluster information col to dataset to find which cluster does tufts fallunder
+
+univ2[472,]  ### this university falls in cluster 2
+```
+
