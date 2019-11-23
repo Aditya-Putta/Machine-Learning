@@ -1,0 +1,184 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+library(readr)
+library(cluster)
+library(factoextra)
+library(knitr)
+library(dendextend)
+library(caret)
+library(ggplot2)
+library(hrbrthemes)
+library(GGally)
+library(viridis)
+
+Cereals <- read_csv("C:/Trading detail/STUDY/01_MSBA/02 MSBA ML/06/Cereals.csv")
+View(Cereals)
+
+
+set.seed(123)
+
+# Excluding the missing values and categorical variables.
+cer<-na.omit(Cereals)   ## deleting rows with "NA" value
+cer_om<-cer[,-c(1:3)]   ## excluding catagorical variable
+scale_cer<-scale(cer_om)  ## Standardizing data for all numeric data
+
+
+#Q a. Apply hierarchical clustering to the data using Euclidean distance to the normalized measurements. Use Agnes to compare the clustering from  single linkage, complete linkage, average linkage, and Ward. Choose the best method.
+
+##  Apply hierarchical clustering to the data using Euclidean distance to the normalized measurements
+cer.dist<-dist(scale_cer,method = "euclidean") ## Dissimilarity matrix
+
+cer.c<-hclust(cer.dist,method = "complete")   # Hierarchical clustering using Complete Linkage
+cer.w<-hclust(cer.dist,method = "ward.D") # Hierarchical clustering using ward Linkage
+cer.s<-hclust(cer.dist,method = "single") # Hierarchical clustering using single Linkage
+cer.a<-hclust(cer.dist,method = "average") ## Hierarchical clustering using average Linkage
+
+
+plot(cer.c,cex=0.6,hang=-1,labels = cer$name) ##Ploting the obtained dendrogram based on complete linkage
+plot(cer.w,cex=0.6,hang=-1,labels = cer$name) ##Ploting the obtained dendrogram based on ward linkage
+plot(cer.s,cex=0.6,hang=-1,labels = cer$name) ##Ploting the obtained dendrogram based on single linkage
+plot(cer.a,cex=0.6,hang=-1,labels = cer$name) ##Ploting the obtained dendrogram based on average linkage
+
+## **Comments** on ploting dendrogram for for all method we can visualize that polt for ward linkage has good representation of cluster which can be identified eaisly (4 cluster)
+
+# using agnes method for agglomerative hierarchical clustering 
+
+cer_ward<- agnes(scale_cer,method = "ward")  # Computing  agnes with ward linkage 
+cer_avg<-agnes(scale_cer,method="average")  # Computing  agnes with averagelinkage
+cer_com<-agnes(scale_cer,method="complete") # Computing  agnes with complete linkage
+cer_sin<-agnes(scale_cer,method="single") # Computing  agnes with single linkage
+
+kable(cbind(ward=cer_ward$ac,average=cer_avg$ac,complete=cer_com$ac,single=cer_sin$ac)) ## this function provide information for Agglomerative coefficients for all linkage in a tabular format and easily view
+
+## **COmments ** On comparing Agglomerative coefficients for all linkage we see " Ward Linkage " with higest coffeicient then others.
+
+
+
+## ** Qb**  : How many clusters would you choose?
+
+# Plotting the Dendogram for agglomerative hierarchical clustering and choosing K=4 clusters.
+
+fviz_dend(cer_ward,k=4,cex=0.9,k_colors = c("#1B9E77", "#D95F02", "#7570B3", "#E7298A"),color_labels_by_k = TRUE,rect= TRUE,main="Dendrogram of agnes")
+##**comments**  Reason for chooseing K=4 as we can distinclty identify cluster
+
+
+## -------------------------------------------------------------------####
+
+
+
+clust <- cutree(cer_ward,k=4) # getting lable for data points
+
+clust   ## this show which observation is falling under defined cluster (eg ; 1,2,3,4)
+
+a1 <-data.frame(cbind(scale_cer,clust))  ## combining cluster lable with subset of the data to view all information in one table  -----" STEP 1" -----
+
+## -------------------------------------------------------------------####
+
+##Q3 . 
+
+newdata <- na.omit(Cereals) ##creating new subset of data and deleting rows with "NA" value
+
+train.data <- newdata[1:60,]  ## creating partition of subset  by taking first 60 row  
+test.data <- newdata[61:74,]  ## creating partition of subset  by taking next 14 row of"newdata"
+
+train <- scale(train.data[,-c(1:3)]) ## Standardizing data for all numeric data for subset
+test <- scale(test.data[,-c(1:3)]) ## Standardizing data for all numeric data for subset
+
+# Computing  agnes with different linkage method to identify highest coefficients
+
+train_ward<- agnes(train,method = "ward")   
+train_avg<-agnes(train,method="average")
+train_com<-agnes(train,method="complete")
+train_sin<-agnes(train,method="single")
+kable(cbind(ward=train_ward$ac,average=train_avg$ac,complete=train_com$ac,single=train_sin$ac)) ## this function provide information for Agglomerative coefficients for all linkage in a tabular format and easily view
+
+fviz_dend(train_ward,k=4,cex=0.9,k_colors = c("#1B9E77", "#D95F02", "#7570B3", "#E7298A"),rect_border = c("#1B9E77", "#D95F02", "#7570B3", "#E7298A"), rect_fill = TRUE  ,color_labels_by_k = TRUE,rect= TRUE,main="Dendrogram of agnes")
+##**comments**  dendrogram shows 4 distinct cluster
+
+clust.train <- cutree(train_ward,k=4) # getting lable for data points
+
+b1 <-data.frame(cbind(train,clust.train))  ## combining cluster lable with subset of the data to view all information in one table
+
+
+
+n1<-data.frame(column=seq(1,13,1),mean=rep(0,13))## to find centroid of variable for cluster lable with k=1
+n2<-data.frame(column=seq(1,13,1),mean=rep(0,13))## to find centroid of variable for cluster lable with k=2
+n3<-data.frame(column=seq(1,13,1),mean=rep(0,13))## to find centroid of variable for cluster lable with k=3
+n4<-data.frame(column=seq(1,13,1),mean=rep(0,13))## to find centroid of variable for cluster lable with k=4
+for(i in 1:13) ## formation of " for loop" to find centroid for all column in subsent of the data
+{
+  n1[i,2]<-mean(b1[b1$clust==1,i])
+  n2[i,2]<-mean(b1[b1$clust==2,i])
+  n3[i,2]<-mean(b1[b1$clust==3,i])
+  n4[i,2]<-mean(b1[b1$clust==4,i])
+  
+}
+centroid.train<-t(cbind(n1$mean,n2$mean,n3$mean,n4$mean)) ## combining mean of each column and then transpose data from column to row for better view
+colnames(centroid.train)<-colnames(Cereals[,-c(1:3)])  ## assign column name to matrix from orignal data
+
+centroid.train 
+
+se<-data.frame(data=seq(1,14,1),cluster=rep(0,14))  ##creating a function for a "for loop" to find minimum distance form cluster centroid to each observation in test data in order to see which cluster will these observation fall in 
+
+for(i in 1:14)   ## " for loop " for 14 observation in test data
+{
+  x1<-as.data.frame(rbind(centroid.train,test[i,]))
+  z1<-as.matrix(get_dist(x1))
+  se[i,2]<-which.min(z1[5,-5])
+}
+
+se  ## tabluar form with observation no. and cluster no.
+
+
+kable(cbind(data_labels=a1[61:74,14],partition_labels=se$cluster))  ## checking cluster label for 14 observation form test.data against orignal cluster lables formed in " STEP 1"
+
+table(se$cluster==a1[61:74,14])
+
+### on further investigation we see the stability of cluster is 92% ie. out of 14 observation it has predicted 13 observation as correct 
+
+
+#Q4 :
+a1 <-data.frame(cbind(scale_cer,clust))  ## combining cluster lable with subset of the data to view all information in one table  -----" STEP 1" -----
+
+m1<-data.frame(column=seq(1,13,1),mean=rep(0,13)) ## to find centroid of variable for cluster lable with k=1
+m2<-data.frame(column=seq(1,13,1),mean=rep(0,13)) ## to find centroid of variable for cluster lable with k=2
+m3<-data.frame(column=seq(1,13,1),mean=rep(0,13)) ## to find centroid of variable for cluster lable with k=3
+m4<-data.frame(column=seq(1,13,1),mean=rep(0,13)) ## to find centroid of variable for cluster lable with k=1
+for(i in 1:13)  ## formation of " for loop" to find centroid for all column in subsent of the data
+{
+  m1[i,2]<-mean(a1[a1$clust==1,i])
+  m2[i,2]<-mean(a1[a1$clust==2,i])
+  m3[i,2]<-mean(a1[a1$clust==3,i])
+  m4[i,2]<-mean(a1[a1$clust==4,i])
+  
+}
+centroid<-t(cbind(m1$mean,m2$mean,m3$mean,m4$mean)) ## combining mean of each column and then transpose data from column to row for better view
+colnames(centroid)<-colnames(Cereals[,-c(1:3)]) ## assign column name to matrix from orignal data
+
+centroid ## view information 
+
+
+#  ploting mean of each variable in cluster on chart to identify  bestpossible combination
+ggparcoord(cbind(c(1:4),centroid),columns = 2:14,groupColumn = 1,showPoints = TRUE,title = " Charter of cluster",alphaLines = 0.9) 
+
+table(clust)
+res1<-cbind(newdata,clust)
+res1[res1$clust==1,]
+res1[res1$clust==2,]
+res1[res1$clust==3,]
+res1[res1$clust==4,]
+
+
+#From the above analysis, the cluster 1 has the highest ratings. Hence it will be the "healthy cluster". 
+## ***Comments *** cluster 1 has high protein,fiber,potassium and aslo been rated high by customers as compared to other cluster . It also has low calories ,carbo as compared to others 
+
+# data should be normalized as it give the same importance to all the variables
+
+```
+
