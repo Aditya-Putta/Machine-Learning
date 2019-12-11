@@ -1,0 +1,183 @@
+---
+title: "BathSoap"
+output:
+  html_document:
+    df_print: paged
+  word_document: default
+---
+
+
+
+```{r}
+
+library(readr)
+BathSoap <- read_csv("C:/Trading detail/STUDY/01_MSBA/02 MSBA ML/Final/BathSoap.csv")
+
+
+library(caret)
+library(factoextra)
+library(hrbrthemes)
+library(GGally)
+library(viridis)
+set.seed(200)
+
+```
+
+**Comments** finding which brand is customer loyal with column defined in data : here loyalty is defined by purchase behavior of the customer in "other999" or rest of 8 brands, combining Br.Cd.57,144,Br.Cd.55,Br.Cd.272,Br.Cd.286,Br.Cd.24,Br.Cd.481,Br.Cd.352,Br.Cd.5 as one brand and finding max loyalty to a specific brand against "other999"
+
+**comment** if we consider K=2 cluster will be classified either high or low with this will not show true information about the data available
+here we consider K=3 as we feel 3 cluster are able to classify characteristic in a efficient way and can be represent easily
+
+```{r}
+BathSoap$maxLoyality<-as.numeric(apply(BathSoap[,23:31],1,max))
+```
+
+1) a. The variables that describe purchase behavior (including brand loyalty)
+**Comments** variable considered here are 
+No. of Brands,Brand Runs,Total Volume,No. of  Trans,Value,Trans / Brand Runs,Vol/Tran,Avg. Price,Others 999and maxLoyality.
+```{r}
+
+
+subset10<-BathSoap[,c(12:19,31,47)]
+subset10.s<-as.data.frame(scale(subset10))
+
+model10 <- kmeans(subset10.s,3,nstart = 50)
+
+fviz_cluster(model10,subset10.s)
+
+result10<-as.data.frame(cbind(1:nrow(model10$centers),model10$centers))
+result10$V1<-as.factor(result10$V1)
+result10
+
+ggparcoord(result10,columns = 2:10, groupColumn = 1,showPoints = TRUE, title = "Characteristics of the cluster",alphaLines = 0.7 )
+```
+
+**comments** : cluster 1 (247) can be stated as not being loyal to any particular brand since max loyalty is also less, cluster 2 (90) is loyal towards a particular brand, cluster 3 (263) shows the tendency to switch between brand.
+
+1) b. The variables that describe the basis for purchase
+
+**Comments ** : variable considered here are Pur Vol No Promo - %,Pur Vol Promo 6 %,Pur Vol Other Promo %,Pr Cat 1,Pr Cat 2,Pr Cat 3,Pr Cat 4,PropCat 5,PropCat 6,PropCat 7,PropCat 8,PropCat 9,PropCat 10,PropCat 11,PropCat 12,PropCat 13,PropCat 14,PropCat 15
+
+```{r}
+subset20<-BathSoap[,c(20:22,32:46)]
+subset20.s<-as.data.frame(scale(subset20))
+
+model20 <- kmeans(subset20.s,3,nstart = 50)
+
+fviz_cluster(model20,subset20.s)
+
+result20<-as.data.frame(cbind(1:nrow(model20$centers),model20$centers))
+result20$V1<-as.factor(result20$V1)
+result20
+
+```
+
+**Comments**: based on information derived we see cluster 1(329) is in favor of price category 2,4, and enjoy the benefits of the proposition given to them in 5 and don't look any promotions while purchasing. cluster 2 (78) are in favor of price category 3 and enjoy the benefits of the proposition given to them in 14, they also don't look for promotion for their purchase. cluster 3(193) look for promotion while purchasing good and fall in price category 3also enjoy suggestion given in 6,7,8,9,10,12,13.
+
+1) c. The variables that describe both purchase behavior and basis of purchase
+
+**Comments** considering both variable which are considered in above 2 models
+
+```{r}
+subset30<-BathSoap[,c(20:22,32:46,12:19,31,47)]
+subset30.s<-as.data.frame(scale(subset30))
+
+model30 <- kmeans(subset30.s,3,nstart = 50)
+
+fviz_cluster(model30,subset30.s)
+
+result30<-as.data.frame(cbind(1:nrow(model30$centers),model30$centers))
+result30$V1<-as.factor(result30$V1)
+result30
+
+ggparcoord(result30,columns = 2:14, groupColumn = 1,showPoints = TRUE, title = "Characteristics of the cluster",alphaLines = 0.7 )
+
+
+ggparcoord(result30,columns = 15:28, groupColumn = 1,showPoints = TRUE, title = "Characteristics of the cluster",alphaLines = 0.7 )
+```
+
+**comments**: cluster 1(68)  ) are loyal to one brand and fall price category 3 with proposition category 14. cluster 2(340) is not keen on any promotion not responsive to any suggestion given to them. enjoy promotion for purchase of goods and utilize suggestions also offered to them. cluster 3(192) enjoy promotion  for purchase of good and utilize suggestion also offered to them
+
+
+2. Select what you think is the best segmentation and comment on the characteristics (demographic,brand loyalty, and basis for purchase) of these clusters. (This information would be used to guide thedevelopment of advertising and promotional campaigns.)
+
+**Comments** considering these demographic SEC,FEH,MT,SEX,AGE,EDU,HS,CHILD,CS,Affluence Index and all other variables considers above
+
+```{r}
+subset40<-BathSoap[,c(2,6,7,8,9,10,11,12:19,31,47,20:22,32:46)]
+subset40.s<-as.data.frame(scale(subset40))
+
+model40 <- kmeans(subset40.s,3,nstart = 50)
+
+fviz_cluster(model40,subset40.s)
+
+result40<-as.data.frame(cbind(1:nrow(model40$centers),model40$centers))
+result40$V1<-as.factor(result40$V1)
+model40$size
+result40
+
+subset40$clusters<-model40$cluster
+# Formation of clusters
+ggparcoord(result40,columns = 2:13, groupColumn = 1,showPoints = TRUE, title = "Characteristics of the cluster",alphaLines = 0.7 ) 
+
+ggparcoord(result40,columns = 14:26, groupColumn = 1,showPoints = TRUE, title = "Characteristics of the cluster",alphaLines = 0.7 ) 
+
+ggparcoord(result40,columns = 27:36, groupColumn = 1,showPoints = TRUE, title = "Characteristics of the cluster",alphaLines = 0.7 )
+```
+**Comments** Based on plot defining characteristics of the cluster
+
+Cluster1 :
+-mix of socioeconomic class
+-consist of a high number of family members 
+-have high total volume, volume per transaction, and value
+-they purchase different brand for a different product
+-don't look for any promotions for purchase
+-volume purchased under price category 2,4 are high
+-don't follow any suggestion for purchase
+
+
+Cluster2 :
+-have low socioeconomic class
+-high transaction per brand 
+-high volume per transaction volume
+-have loyalty towards a brand
+-have purchased based on price category 3
+-purchase product proposition category 14
+-not keen on purchasing product based on promotions
+
+cluster 3: 
+- have a group of people with high socioeconomic class
+- education level is high
+- high value of durable possessed hence they have an average price as high
+- loyal to "other 999" products
+- look for promotion of at least 6% 
+-volume purchased under price category 1 are high
+- purchase product proposition category 6,7,8,10,12,13
+
+
+3. Develop a model that classifies the data into these segments. Since this information would most likely be used in targeting direct-mail promotions, it would be useful to select a market segment that would be defined as a success in the classification model.
+**comments** here we are using cluster 1 as a base to target our promotional offer since they have 50% of the data point can be used to find characteristics for building model 
+
+```{r}
+subset402<- subset40 ##
+subset402$clusters<-as.factor( ifelse((subset402$clusters==2) | (subset402$clusters==3), "No","Yes"))
+
+traindata <- subset402[c(1:500),]
+testdata <- subset402[c(501:600),]
+
+model402 <- glm(clusters~.,data = traindata,family = binomial(link='logit') )
+summary(model402)
+result402 <- predict(model402,newdata = testdata,type = 'response')
+result402<- as.factor(result402>.5)
+
+levels(result402)<- c("No","Yes")
+
+library(gmodels)
+CrossTable(testdata$clusters,result402,prop.chisq = FALSE)
+confusionMatrix(testdata$clusters,result402)
+
+subset402$result402 <- result402
+
+```
+
+**Comments** : based on model built we see that socioeconomic class, affluence index,total volume,loyalty for specific brand have significance and hence can be used to target as a promotional offers
